@@ -22,23 +22,20 @@ class TCPServer extends Thread
 	private static ServerSocket serverSocket;
 	private static Socket clientSocket;
 	private static String token;
+	private static int lampStatus;
 
 	private static final String USER = "AntonPrih";
 	private static final String PASSWORD = "Puta";
 
 	static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";  
 	static final String DB_URL = "jdbc:mysql://localhost/project?verifyServerCertificate=false"+
-				"&useSSL=false"+
-				"&requireSSL=false";
+			"&useSSL=false"+
+			"&requireSSL=false";
 
 	private static Connection conn = null;
 	private  static Statement stmt = null;
 
-
-
-
 	public static void main(String[] args) throws IOException{
-
 
 		try{
 			//STEP 2: Register JDBC driver
@@ -51,12 +48,25 @@ class TCPServer extends Thread
 			//STEP 4: Execute a query
 			System.out.println("Creating statement...");
 			stmt = conn.createStatement();
-			String sql;
-			sql = "SELECT status FROM lamp";
-			ResultSet rs = stmt.executeQuery(sql);
+
+
+			String sqlFan = "SELECT status FROM fan";
+			ResultSet rsFan = stmt.executeQuery(sqlFan);
+
+			String sqlLamp =  "SELECT status FROM lamp";
+			ResultSet rsLamp = stmt.executeQuery(sqlLamp);
+		
+			
+			if (rsLamp.next())
+			{
+			   lampStatus = rsLamp.getInt(1);
+			  
+			}
+			rsLamp.close();
 
 			//STEP 6: Clean-up environment
-			rs.close();
+
+			rsFan.close();
 			stmt.close();
 			conn.close();
 		}catch(SQLException se){
@@ -65,29 +75,16 @@ class TCPServer extends Thread
 		}catch(Exception e){
 			//Handle errors for Class.forName
 			e.printStackTrace();
-		}finally{
-			//finally block used to close resources
-			try{
-				if(stmt!=null)
-					stmt.close();
-			}catch(SQLException se2){
-			}// nothing we can do
-			try{
-				if(conn!=null)
-					conn.close();
-			}catch(SQLException se){
-				se.printStackTrace();
-			}//end finally try
-		}//end try
-		System.out.println("Goodbye!");
-
+		}
 
 		try{
 			serverSocket = new ServerSocket(MYPORT);
 		} catch(IOException e){
 			System.out.println("TCPEchoServer failed to create ServerSocket.");
+			e.printStackTrace();
 			System.exit(-1);
 		}
+
 
 		while (true) {
 			new TCPServer(serverSocket.accept());
@@ -105,7 +102,6 @@ class TCPServer extends Thread
 			System.out.printf("TCP echo request from %s", clientSocket.getInetAddress().getHostAddress());
 			System.out.printf(" using port %d\n", clientSocket.getPort());
 
-
 			while(true)
 			{
 				BufferedReader iptFromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -118,19 +114,23 @@ class TCPServer extends Thread
 					System.out.println("Arduino");
 					if (message[2].equals("400")){
 						System.out.println("Jaaaaay!!");
-						String not = TCPclientMess;
-						Result result = sender.send(msg_lum_400,token , 3);
 
-						if ((result.getErrorCodeName() == null)) {
-							System.out.println(("GCM Notification is sent successfully"));
-							returnMess = TCPclientMess;     
-							optToClient.writeBytes("okej");
+
+
+						if (lampStatus == 1){
+
+							Result result = sender.send(msg_lum_400,token , 3);
+
+							if ((result.getErrorCodeName() == null)) {
+								System.out.println(("GCM Notification is sent successfully"));
+								returnMess = TCPclientMess;     
+								optToClient.writeBytes("okej");
+							}
+
+							else {
+								System.out.println(("Error occurred while sending push notification :" + result.getErrorCodeName()));
+							}
 						}
-
-						else {
-							System.out.println(("Error occurred while sending push notification :" + result.getErrorCodeName()));
-						}
-
 					}
 					else if (message[2].equals("100")){
 						System.out.println("Priiiiiih");
